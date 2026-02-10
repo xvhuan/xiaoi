@@ -1,0 +1,17 @@
+{
+    "speaker": {
+        "userId": "",
+        "password": "",
+        "passToken": "",
+        "did": ""
+    },
+    "webhook": {
+        "port": 3088,
+        "host": "localhost",
+        "token": "",
+        "logFile": "log/webhook.log"
+    },
+    "mcp": {
+        "logFile": "log/mcp_server.log"
+    }
+}

@@ -1,0 +1,8 @@
+{
+    "servers": {
+        "xiaoi-voice-notify": {
+            "type": "stdio",
+            "command": "xiaoi-mcp"
+        }
+    }
+}
