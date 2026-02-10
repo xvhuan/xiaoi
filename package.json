@@ -1,6 +1,6 @@
 {
   "name": "xiaoii",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "小爱音箱语音通知工具 - CLI + TUI + MCP Server",
   "keywords": [
     "xiaoi",

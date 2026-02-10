@@ -34,6 +34,7 @@ const requiredFiles = [
     "lib/webhook_server.js",
     "lib/pm2.js",
     "lib/config.js",
+    "lib/version_check.js",
     "mcp_server.js",
     "config.example.json",
     "README.md",

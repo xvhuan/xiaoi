@@ -15,7 +15,7 @@
 
 [![Node.js](https://img.shields.io/badge/Node.js-%3E%3D18-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![npm](https://img.shields.io/npm/v/xiaoi-notify)](https://www.npmjs.com/package/xiaoi-notify)
+[![npm](https://img.shields.io/npm/v/xiaoii)](https://www.npmjs.com/package/xiaoii)
 
 </div>
 
@@ -29,16 +29,27 @@
 - Webhook 服务：提供 HTTP 接口，方便第三方系统集成
 - PM2 常驻：一键后台运行 Webhook（不需要挂着终端）
 
+## 更新日志
+
+### v1.0.1 (2026-02-10)
+
+- 修复 Windows 下 `pm2/npm/npx` 探测误判（`.cmd` shim 导致的 ENOENT/不可执行问题）
+- 修复 npm v10+ 不支持 `npm bin -g` 导致的全局 pm2 识别失败（改用 `npm prefix -g` 回退）
+- TUI 方向键/小键盘数字选择体验优化（减少重绘卡顿、返回不再二次回车）
+- Webhook 菜单状态显示优化（区分内嵌/PM2 常驻，避免误导）
+- 新增：TUI 查看 PM2 日志
+- 新增：版本更新检测（可用 `XIAOI_NO_UPDATE_CHECK=1` 禁用）
+
 ## 安装
 
 ### 全局安装（推荐）
 
 ```bash
 # npm
-npm i -g xiaoi-notify
+npm i -g xiaoii
 
 # 或 pnpm
-pnpm add -g xiaoi-notify
+pnpm add -g xiaoii
 ```
 
 安装后即可在任何目录使用 `xiaoi` 和 `xiaoi-mcp` 命令。
@@ -212,6 +223,16 @@ xiaoi pm2 deploy
 # 查看状态
 xiaoi pm2 status
 
+# 查看 pm2 进程日志（stdout/stderr）
+xiaoi pm2 logs 200
+
+# 查看 Webhook 日志文件（~/.xiaoi/log/webhook.log 等）
+xiaoi pm2 webhook-log 200
+
+# 开关公网访问（修改 webhook.host）
+xiaoi pm2 public on
+xiaoi pm2 public off
+
 # 停止/删除
 xiaoi pm2 stop
 xiaoi pm2 delete
@@ -261,4 +282,3 @@ xiaoi/
 ## License
 
 MIT，详见 `LICENSE`。
-
