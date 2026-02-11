@@ -1,6 +1,6 @@
 {
   "name": "xiaoii",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "小爱音箱语音通知工具 - CLI + TUI + MCP Server",
   "keywords": [
     "xiaoi",
@@ -30,7 +30,7 @@
     "README.md"
   ],
   "scripts": {
-    "postinstall": "node -e \"const fs=require('fs');const os=require('os');const path=require('path');const home=process.env.USERPROFILE||process.env.HOME||os.homedir(); if(!home) process.exit(0); const dir=path.join(home,'.xiaoi'); const cfg=path.join(dir,'config.json'); try{fs.mkdirSync(dir,{recursive:true});}catch(e){}; try{if(!fs.existsSync(cfg)){fs.writeFileSync(cfg, JSON.stringify({speaker:{userId:'',password:'',passToken:'',did:''},webhook:{port:3088,host:'localhost',token:'',logFile:'log/webhook.log'},mcp:{logFile:'log/mcp_server.log'}}, null, 4), 'utf-8');}}catch(e){}\"",
+    "postinstall": "node -e \"const fs=require('fs');const os=require('os');const path=require('path');const home=process.env.USERPROFILE||process.env.HOME||os.homedir(); if(!home) process.exit(0); const dir=path.join(home,'.xiaoi'); const cfg=path.join(dir,'config.json'); try{fs.mkdirSync(dir,{recursive:true});}catch(e){}; try{if(!fs.existsSync(cfg)){fs.writeFileSync(cfg, JSON.stringify({speaker:{userId:'',password:'',passToken:'',did:'',ttsFallbackCommand:[5,1],ttsFallbackCommands:{oh2p:[7,3],oh2:[5,3],lx06:[5,1],s12:[5,1],l15a:[7,3],lx5a:[5,1],lx05:[5,1],x10a:[7,3],l17a:[7,3],l06a:[5,1],lx01:[5,1],l05b:[5,3],l05c:[5,3],l09a:[3,1],lx04:[5,1],asx4b:[5,3],x6a:[7,3],x08e:[7,3],x8f:[7,3]}},webhook:{port:3088,host:'localhost',token:'',logFile:'log/webhook.log'},mcp:{logFile:'log/mcp_server.log'}}, null, 4), 'utf-8');}}catch(e){}\"",
     "prepublishOnly": "node scripts/prepublish.js"
   },
   "dependencies": {
