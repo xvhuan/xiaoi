@@ -119,7 +119,7 @@ pnpm link --global
 | `webhook.port` | Webhook 端口 |
 | `webhook.token` | Webhook 鉴权 Token（可选；常驻 Webhook 如果留空会自动生成并写回配置） |
 
-> 推荐使用 passToken 登录。passToken 获取参考：`migpt-next/issues/4`
+> 推荐使用 passToken 登录。passToken 获取参考：[migpt-next/issues/4](https://github.com/idootop/migpt-next/issues/4)
 
 ## 使用
 
@@ -269,7 +269,7 @@ xiaoi/
 
 1. 确认 `userId` 是小米 ID（数字），不是手机号或邮箱
 2. 推荐使用 `passToken` 代替密码登录
-3. passToken 获取参考：`migpt-next/issues/4`
+3. passToken 获取参考：[migpt-next/issues/4](https://github.com/idootop/migpt-next/issues/4)
 
 ### 找不到设备？
 
@@ -278,6 +278,7 @@ xiaoi/
 ## 致谢
 
 基于 `@mi-gpt/next` 构建。
+https://github.com/idootop/migpt-next
 
 ## License
 
