@@ -1,0 +1,45 @@
+version: "3.8"
+
+services:
+  xiaoi-webhook:
+    image: iusy/xiaoi:latest
+    # 如果要本地构建，注释上面的 image 并取消下面的注释：
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile
+    container_name: xiaoi-webhook
+    restart: unless-stopped
+    ports:
+      - "${XIAOI_PORT:-51666}:51666"
+    volumes:
+      # 配置 + 日志持久化（可选，环境变量也能完全替代配置文件）
+      - xiaoi-data:/root/.xiaoi
+    environment:
+      - TZ=Asia/Shanghai
+      - NODE_ENV=production
+      # ================================================
+      # 【必填】在下面填入你的小米账号信息
+      # ================================================
+      - XIAOI_USER_ID=${XIAOI_USER_ID:-}          # 小米 ID（数字，不是手机号）
+      - XIAOI_PASS_TOKEN=${XIAOI_PASS_TOKEN:-}    # passToken（推荐）
+      - XIAOI_DID=${XIAOI_DID:-}                  # 音箱在米家中的名称（必须完全一致）
+      # ================================================
+      # 【可选】高级配置
+      # ================================================
+      - XIAOI_PASSWORD=${XIAOI_PASSWORD:-}         # 密码登录（不推荐，可能被安全验证拦截）
+      - XIAOI_TOKEN=${XIAOI_TOKEN:-}               # Webhook 鉴权 Token（留空自动生成）
+      - XIAOI_TTS_MODE=${XIAOI_TTS_MODE:-auto}    # TTS 模式: auto / command / default
+      - XIAOI_VERBOSE_LOG=${XIAOI_VERBOSE_LOG:-false}
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:51666/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  xiaoi-data:

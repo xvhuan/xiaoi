@@ -148,7 +148,7 @@ pnpm link --global
         }
     },
     "webhook": {
-        "port": 3088,
+        "port": 51666,
         "host": "localhost",
         "token": "",
         "logFile": "log/webhook.log"
@@ -254,19 +254,19 @@ command = "xiaoi-mcp"
 
 ```bash
 # 发送语音通知
-curl -X POST http://localhost:3088/webhook/tts \
+curl -X POST http://localhost:51666/webhook/tts \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer <token>" \
   -d '{"text":"你好，世界"}'
 
 # 播放音频
-curl -X POST http://localhost:3088/webhook/audio \
+curl -X POST http://localhost:51666/webhook/audio \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer <token>" \
   -d '{"url":"https://example.com/audio.mp3"}'
 
 # 设置音量
-curl -X POST http://localhost:3088/webhook/volume \
+curl -X POST http://localhost:51666/webhook/volume \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer <token>" \
   -d '{"volume":50}'
@@ -309,6 +309,118 @@ xiaoi pm2 startup
 
 > 如果你的 Webhook 要对外网提供服务，请务必设置 `webhook.token` 或配合防火墙/反向代理做鉴权，避免被任意调用。
 
+### Docker 部署（容器化 Webhook）
+
+将 xiaoi Webhook 封装到 Docker 容器运行，适合服务器/NAS/云主机。**不需要手动编辑任何配置文件**，只需填写环境变量即可启动。
+
+#### 快速开始（直接拉镜像，不用 clone）
+
+```bash
+# 拉取镜像
+docker pull iusy/xiaoi:latest
+
+# 一行启动
+docker run -d \
+  --name xiaoi-webhook \
+  --restart unless-stopped \
+  -p 51666:51666 \
+  -e XIAOI_USER_ID=你的小米ID \
+  -e XIAOI_PASS_TOKEN=你的passToken \
+  -e XIAOI_DID=你的音箱名称 \
+  iusy/xiaoi:latest
+```
+
+搞定！🎉 不需要 clone 代码、不需要编辑配置文件。
+
+#### 或者用 Docker Compose
+
+```bash
+# 1. 下载 docker-compose.yml 和 .env 模板
+curl -O https://raw.githubusercontent.com/xvhuan/xiaoi/main/docker-compose.yml
+curl -o .env https://raw.githubusercontent.com/xvhuan/xiaoi/main/.env.example
+
+# 2. 编辑 .env，填入你的信息
+#    XIAOI_USER_ID、XIAOI_PASS_TOKEN、XIAOI_DID
+
+# 3. 一键启动
+docker-compose up -d
+```
+
+`.env` 文件只需填 3 项：
+
+```env
+XIAOI_USER_ID=你的小米ID（数字）
+XIAOI_PASS_TOKEN=你的passToken
+XIAOI_DID=你的音箱名称
+```
+
+> passToken 获取方法：[migpt-next/issues/4](https://github.com/idootop/migpt-next/issues/4)
+
+
+#### 纯 Docker 命令（不用 docker-compose）
+
+```bash
+# 构建镜像
+docker build -t xiaoi-webhook .
+
+# 运行（直接用 -e 传环境变量）
+docker run -d \
+  --name xiaoi-webhook \
+  --restart unless-stopped \
+  -p 51666:51666 \
+  -e XIAOI_USER_ID=你的小米ID \
+  -e XIAOI_PASS_TOKEN=你的passToken \
+  -e XIAOI_DID=你的音箱名称 \
+  xiaoi-webhook
+```
+
+#### 环境变量一览
+
+| 变量 | 必填 | 说明 |
+|------|------|------|
+| `XIAOI_USER_ID` | ✅ | 小米 ID（数字，在小米账号个人信息中查看） |
+| `XIAOI_PASS_TOKEN` | ✅ | passToken（推荐登录方式） |
+| `XIAOI_DID` | ✅ | 音箱在米家 App 中的名称（必须完全一致） |
+| `XIAOI_PASSWORD` | | 密码登录（不推荐，可能被安全验证拦截） |
+| `XIAOI_TOKEN` | | Webhook 鉴权 Token（留空自动生成） |
+| `XIAOI_PORT` | | 端口号（默认 `51666`） |
+| `XIAOI_TTS_MODE` | | TTS 模式：`auto` / `command` / `default` |
+| `XIAOI_VERBOSE_LOG` | | 详细日志：`true` / `false` |
+
+#### 验证服务
+
+```bash
+# 查看容器日志（看 Token 和启动状态）
+docker-compose logs
+
+# 状态检查
+curl http://localhost:51666/
+
+# 发送语音通知
+curl -X POST http://localhost:51666/webhook/tts \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <从日志中获取的token>" \
+  -d '{"text":"Docker 部署成功！"}'
+```
+
+#### 常用命令
+
+```bash
+# 查看日志
+docker-compose logs -f
+
+# 重启
+docker-compose restart
+
+# 停止
+docker-compose down
+
+# 更新（拉取最新代码后）
+git pull
+docker-compose up -d --build
+```
+
+
 ## 项目结构
 
 ```
@@ -323,6 +435,10 @@ xiaoi/
 │   └── pm2.js                # PM2 一键管理封装
 ├── mcp_server.js             # MCP Server
 ├── config.example.json       # 配置模板
+├── Dockerfile                # Docker 镜像构建
+├── docker-compose.yml        # Docker Compose 编排
+├── docker-entrypoint.sh      # 容器启动入口脚本
+├── .env.example              # Docker 环境变量模板
 └── README.md
 ```
 

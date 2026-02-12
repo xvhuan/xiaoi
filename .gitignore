@@ -3,3 +3,4 @@ log/
 .mi.json
 *.log
 config.json
+.env
