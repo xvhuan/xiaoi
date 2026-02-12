@@ -31,6 +31,13 @@
 
 ## 更新日志
 
+### v1.0.7 (2026-02-12)
+
+- 新增 Docker 容器化部署：支持通过环境变量配置，无需手动编辑配置文件，一行命令即可启动 Webhook 服务
+- 新增 GitHub Actions CI/CD：打 tag 自动发布 npm 包 + 构建推送 Docker 镜像（Docker Hub + GHCR，支持 amd64/arm64 双架构）
+- 新增 `.env.example` 环境变量模板，降低 Docker 部署门槛
+- 容器内使用 PM2（`pm2-runtime`）管理进程，自动健康检查与重启
+
 ### v1.0.6 (2026-02-12)
 
 - 修复 `ttscmd` 输入解析错误：`[7,3]` 不再被误解析为 `[0,7]`
