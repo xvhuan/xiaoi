@@ -4,6 +4,8 @@
         "password": "",
         "passToken": "",
         "did": "",
+        "ttsMode": "auto",
+        "verboseLog": false,
         "ttsFallbackCommand": [5, 1],
         "ttsFallbackCommands": {
             "oh2p": [7, 3],

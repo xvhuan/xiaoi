@@ -31,12 +31,23 @@
 
 ## 更新日志
 
+### v1.0.3 (2026-02-12)
+
+- 新增 TTS 链路模式切换：`auto / command / default`
+- 连接测试支持手动输入临时 `ttscmd` 与临时模式，便于现场调试
+- 新增详细日志开关，可显示/隐藏 `ttscmd` 与默认链路执行细节
+
 ### v1.0.2 (2026-02-11)
 
-- 新增 TTS 兜底兼容：默认 `MiNA.play(text)` 失败时，自动按机型映射回退 `MiOT.doAction`
+- 调整 TTS 调用顺序：优先 `ttscmd(MiOT.doAction)`，失败后回退默认 `MiNA.play(text)`
 - 内置完整机型 `ttsFallbackCommands` 映射（含 `LX04` 等常见型号），并支持用户自定义覆盖
 - 账号设置新增「查看设备列表并选择 did」，可直接从设备列表一键写回配置，降低 did 填错概率
 - 配置模板/自动生成配置/README 同步新增 `speaker.ttsFallbackCommand` 与 `speaker.ttsFallbackCommands`
+- 新增主动测试模式：支持分别测试 `ttscmd` 链路和默认链路（`MiNA.play`）
+- 账号设置新增 `ttscmd` 编辑入口：支持修改默认命令与按机型覆盖命令
+- 新增 TTS 链路模式：支持 `auto / command / default` 三种模式，用户可手动切换
+- 新增详细日志开关：支持显示/隐藏 `ttscmd` 与默认链路的执行日志
+- 连接测试支持手动输入临时 `ttscmd` 与临时链路模式，便于现场调试
 
 ### v1.0.1 (2026-02-10)
 
@@ -96,6 +107,8 @@ pnpm link --global
         "password": "你的密码（不推荐）",
         "passToken": "你的passToken（推荐）",
         "did": "音箱在米家中的名称",
+        "ttsMode": "auto",
+        "verboseLog": false,
         "ttsFallbackCommand": [5, 1],
         "ttsFallbackCommands": {
             "oh2p": [7, 3],
@@ -144,13 +157,15 @@ pnpm link --global
 | `speaker.password` | 小米账号密码（可能因安全验证失败） |
 | `speaker.passToken` | passToken（推荐） |
 | `speaker.did` | 音箱在米家 App 中的设备名称（必须完全一致） |
-| `speaker.ttsFallbackCommand` | TTS 回退指令（默认 `[5,1]`，当默认 TTS 无声时兜底） |
-| `speaker.ttsFallbackCommands` | 按型号覆盖回退指令（如 `lx04:[5,1]`、`l09a:[3,1]`） |
+| `speaker.ttsMode` | TTS 链路模式：`auto`（先 ttscmd 后默认）、`command`（仅 ttscmd）、`default`（仅默认链路） |
+| `speaker.verboseLog` | 详细日志开关（`true/false`），控制是否打印链路执行细节 |
+| `speaker.ttsFallbackCommand` | 默认 `ttscmd`（默认 `[5,1]`，优先调用） |
+| `speaker.ttsFallbackCommands` | 按型号覆盖 `ttscmd`（如 `lx04:[5,1]`、`l09a:[3,1]`） |
 | `webhook.host` | 监听地址；需要外网访问可设置为 `0.0.0.0`（注意安全） |
 | `webhook.port` | Webhook 端口 |
 | `webhook.token` | Webhook 鉴权 Token（可选；常驻 Webhook 如果留空会自动生成并写回配置） |
 
-> 提示：在 TUI 的「账号设置」里新增了「查看设备列表并选择 did」，可直接从账号下的真实设备中选择，避免手填 did 出错。
+> 提示：在 TUI 的「账号设置」里可切换 TTS 模式、修改默认/机型 `ttscmd`、开关详细日志；在「连接测试」里可手动输入临时 `ttscmd` 与临时模式进行调试。
 
 > 推荐使用 passToken 登录。passToken 获取参考：[migpt-next/issues/4](https://github.com/idootop/migpt-next/issues/4)
 
