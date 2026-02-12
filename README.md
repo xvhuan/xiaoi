@@ -334,6 +334,7 @@ docker run -d \
   -e XIAOI_USER_ID=你的小米ID \
   -e XIAOI_PASS_TOKEN=你的passToken \
   -e XIAOI_DID=你的音箱名称 \
+  -e XIAOI_TOKEN=你的Webhook鉴权Token \
   iusy/xiaoi:latest
 ```
 
@@ -359,6 +360,7 @@ docker-compose up -d
 XIAOI_USER_ID=你的小米ID（数字）
 XIAOI_PASS_TOKEN=你的passToken
 XIAOI_DID=你的音箱名称
+XIAOI_TOKEN=你的Webhook鉴权Token
 ```
 
 > passToken 获取方法：[migpt-next/issues/4](https://github.com/idootop/migpt-next/issues/4)

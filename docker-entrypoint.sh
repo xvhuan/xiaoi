@@ -129,5 +129,4 @@ INTERNAL_PORT=$(node -e "try{const c=JSON.parse(require('fs').readFileSync('$CON
 exec pm2-runtime start /app/lib/webhook_server.js \
   --name xiaoi-webhook \
   --max-memory-restart 200M \
-  --log-date-format "YYYY-MM-DD HH:mm:ss" \
   -- "$@"
