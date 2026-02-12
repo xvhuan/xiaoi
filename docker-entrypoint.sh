@@ -70,7 +70,7 @@ if (!cfg.speaker.ttsFallbackCommands) {
 
 // ---- webhook 配置 ----
 cfg.webhook.host = '0.0.0.0';  // 容器内必须监听所有网卡
-cfg.webhook.port = parseInt(env.XIAOI_PORT || cfg.webhook.port || '51666', 10);
+cfg.webhook.port = parseInt(env.XIAOI_PORT || '51666', 10);  // 容器内强制使用此端口，忽略 config 旧值
 cfg.webhook.logFile = '$CONFIG_DIR/log/webhook.log';
 
 if (env.XIAOI_TOKEN) {
