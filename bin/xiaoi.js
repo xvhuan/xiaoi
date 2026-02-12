@@ -58,7 +58,11 @@ async function main() {
         })();
         if (pkg && pkg.name && pkg.version) {
             // 不 await，避免影响启动速度
-            checkForUpdate({ packageName: pkg.name, currentVersion: pkg.version })
+            checkForUpdate({
+                packageName: pkg.name,
+                currentVersion: pkg.version,
+                cacheTtlMs: 0,
+            })
                 .then((r) => {
                     if (r && r.ok && r.outdated && r.latestVersion) {
                         console.log(
