@@ -31,6 +31,12 @@
 
 ## 更新日志
 
+### v1.0.8 (2026-02-12)
+
+- 修复 Docker 容器启动失败：移除 `pm2-runtime` 不支持的 `--log-date-format` 参数
+- 修复 Docker 构建失败：`npm ci` 改为 `npm install`（兼容 pnpm 项目）
+- 文档补充 `XIAOI_TOKEN` 环境变量示例，方便用户自定义 Webhook 鉴权 Token
+
 ### v1.0.7 (2026-02-12)
 
 - 新增 Docker 容器化部署：支持通过环境变量配置，无需手动编辑配置文件，一行命令即可启动 Webhook 服务
