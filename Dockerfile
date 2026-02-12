@@ -10,10 +10,10 @@ RUN npm install -g pm2
 WORKDIR /app
 
 # 先复制 package 文件，利用 Docker 缓存层加速重建
-COPY package.json package-lock.json ./
+COPY package.json ./
 
 # 安装依赖（生产模式）
-RUN npm ci --omit=dev
+RUN npm install --omit=dev
 
 # 复制项目源码
 COPY bin/ ./bin/
