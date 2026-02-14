@@ -27,9 +27,19 @@
 - CLI 命令：适合脚本/自动化场景
 - MCP Server：供 Codex/Cursor/VS Code 等 AI 编程助手调用
 - Webhook 服务：提供 HTTP 接口，方便第三方系统集成
+- 多音箱路由：支持维护音箱列表、设置默认音箱、按请求 did 临时覆盖
 - PM2 常驻：一键后台运行 Webhook（不需要挂着终端）
 
 ## 更新日志
+
+### v1.0.10 (2026-02-14)
+
+- 新增多音箱路由能力：支持 `speaker.defaultDid` 与 `speaker.speakers`，并兼容旧 `speaker.did`
+- Webhook 四个接口支持 body 传 `did`（`tts/audio/volume/command`），不传按默认优先级路由
+- 新增 TUI「音箱列表管理」：支持添加设备、设置默认、启用/禁用、删除
+- 新增 CLI MiOT 能力：`xiaoi command`（动作）与 `xiaoi getprop`（属性读取）
+- 新增 MCP 工具：`do_action` 与 `get_property`，并统一支持可选 `did`
+- Docker/文档更新：新增 `XIAOI_DEFAULT_DID` 与 OH2P（`xiaomi.wifispeaker.oh2p`）简单 `cmd` 用例
 
 ### v1.0.9 (2026-02-14)
 
@@ -139,6 +149,15 @@ pnpm link --global
         "password": "你的密码（不推荐）",
         "passToken": "你的passToken（推荐）",
         "did": "音箱在米家中的名称",
+        "defaultDid": "默认音箱 did（可选）",
+        "speakers": [
+            {
+                "did": "音箱 did",
+                "name": "客厅小爱",
+                "model": "lx04",
+                "enabled": true
+            }
+        ],
         "ttsMode": "auto",
         "verboseLog": false,
         "ttsFallbackCommand": [5, 1],
@@ -188,7 +207,9 @@ pnpm link --global
 | `speaker.userId` | 小米 ID（数字，在小米账号个人信息中查看） |
 | `speaker.password` | 小米账号密码（可能因安全验证失败） |
 | `speaker.passToken` | passToken（推荐） |
-| `speaker.did` | 音箱在米家 App 中的设备名称（必须完全一致） |
+| `speaker.did` | 兼容字段（旧版本默认设备）；新版本会与 `defaultDid` 同步 |
+| `speaker.defaultDid` | 默认音箱 did（未在请求体传 did 时优先使用） |
+| `speaker.speakers` | 已添加音箱列表（`did/name/model/enabled`） |
 | `speaker.ttsMode` | TTS 链路模式：`auto`（先 ttscmd 后默认）、`command`（仅 ttscmd）、`default`（仅默认链路） |
 | `speaker.verboseLog` | 详细日志开关（`true/false`），控制是否打印链路执行细节 |
 | `speaker.ttsFallbackCommand` | 默认 `ttscmd`（默认 `[5,1]`，优先调用） |
@@ -196,6 +217,14 @@ pnpm link --global
 | `webhook.host` | 监听地址；需要外网访问可设置为 `0.0.0.0`（注意安全） |
 | `webhook.port` | Webhook 端口 |
 | `webhook.token` | Webhook 鉴权 Token（可选；常驻 Webhook 如果留空会自动生成并写回配置） |
+
+Webhook 默认音箱优先级：
+
+1. `speaker.defaultDid`
+2. `XIAOI_DEFAULT_DID`（环境变量）
+3. `speaker.did`（兼容字段）
+
+> 请求体显式传 `did` 时，`did` 必须在 `speaker.speakers` 中且 `enabled=true`，否则返回 `400`。
 
 > 提示：在 TUI 的「账号设置」里可切换 TTS 模式、修改默认/机型 `ttscmd`、开关详细日志；在「连接测试」里可手动输入临时 `ttscmd` 与临时模式进行调试。
 
@@ -219,12 +248,45 @@ xiaoi tts 部署已完成，请查看
 # 设置音量
 xiaoi volume 30
 
+# 发送 MiOT 指令（可选 did）
+xiaoi command 3 1 "[]"
+xiaoi command 3 1 '[{"piid":1,"value":true}]' --did 客厅小爱
+
+# 读取 MiOT 属性（可选 did）
+xiaoi getprop 3 1 --did 客厅小爱
+
 # 检查连接状态
 xiaoi status
 
 # 帮助
 xiaoi help
 ```
+
+#### MiOT `cmd` 简单用例（`xiaomi.wifispeaker.oh2p`）
+
+- 米家规格书（你的音箱示例）：`https://home.miot-spec.com/spec/xiaomi.wifispeaker.oh2p`
+- 该机型常见 TTS `ttscmd`：`[7,3]`
+
+```bash
+# 1) 最简单：直接发 TTS（推荐）
+xiaoi tts "主人，这是一条 OH2P 测试" --did 你的设备did
+
+# 2) 走 MiOT cmd 方式发 TTS（oh2p 常见 [7,3]）
+xiaoi command 7 3 "[\"主人，这是一条 OH2P cmd 测试\"]" --did 你的设备did
+
+# 3) 读取 playing-state（SIID=3, PIID=1）
+xiaoi getprop 3 1 --did 你的设备did
+# 返回值常见含义：1=播放中，0=停止，2=暂停
+```
+
+构建 `cmd`（`siid/aiid/params`）的简单方法：
+
+1. 打开对应设备规格书页面（如上面的 `oh2p` 链接）。
+2. 找到目标能力对应的 `Service` / `Action`，记录 `siid` 和 `aiid`。
+3. 按该 `Action` 的参数定义准备 `params`：无参数用 `[]`，有参数按文档顺序组装 JSON 数组。
+4. 执行：`xiaoi command <siid> <aiid> '<paramsJson>' [--did <设备did>]`。
+
+> 说明：不同动作的 `params` 结构不同，务必以规格书中的 action 参数定义为准。
 
 ### MCP Server（AI 编程助手集成）
 
@@ -259,6 +321,10 @@ command = "xiaoi-mcp"
 | `notify` | 发送语音通知（TTS） |
 | `play_audio` | 播放音频链接 |
 | `set_volume` | 设置音量 |
+| `do_action` | 发送 MiOT 指令（`siid/aiid/params`） |
+| `get_property` | 读取 MiOT 属性值（`siid/piid`） |
+
+> 这 5 个 MCP 工具都支持可选参数 `did`：不传走默认音箱，传了走指定音箱。
 
 ### Webhook 服务（HTTP 接口）
 
@@ -269,24 +335,32 @@ command = "xiaoi-mcp"
 - `Authorization: Bearer <token>`
 - 或 `X-Xiaoi-Token: <token>`
 
+你也可以在请求体里传 `did` 指定本次目标音箱；不传时按默认优先级自动路由。
+
 ```bash
-# 发送语音通知
+# 发送语音通知（可选 did 指定目标音箱）
 curl -X POST http://localhost:51666/webhook/tts \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer <token>" \
-  -d '{"text":"你好，世界"}'
+  -d '{"text":"你好，世界","did":"客厅小爱"}'
 
-# 播放音频
+# 播放音频（可选 did）
 curl -X POST http://localhost:51666/webhook/audio \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer <token>" \
-  -d '{"url":"https://example.com/audio.mp3"}'
+  -d '{"url":"https://example.com/audio.mp3","did":"卧室小爱"}'
 
-# 设置音量
+# 设置音量（可选 did）
 curl -X POST http://localhost:51666/webhook/volume \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer <token>" \
-  -d '{"volume":50}'
+  -d '{"volume":50,"did":"客厅小爱"}'
+
+# 发送 MiOT 指令（可选 did）
+curl -X POST http://localhost:51666/webhook/command \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -d '{"siid":3,"aiid":1,"params":[],"did":"客厅小爱"}'
 ```
 
 ### Webhook 常驻（PM2 一键启动）
@@ -344,6 +418,7 @@ docker run -d \
   -e XIAOI_USER_ID=你的小米ID \
   -e XIAOI_PASS_TOKEN=你的passToken \
   -e XIAOI_DID=你的音箱名称 \
+  -e XIAOI_DEFAULT_DID=默认音箱did \
   -e XIAOI_TOKEN=你的Webhook鉴权Token \
   iusy/xiaoi:latest
 ```
@@ -358,18 +433,19 @@ curl -O https://raw.githubusercontent.com/xvhuan/xiaoi/main/docker-compose.yml
 curl -o .env https://raw.githubusercontent.com/xvhuan/xiaoi/main/.env.example
 
 # 2. 编辑 .env，填入你的信息
-#    XIAOI_USER_ID、XIAOI_PASS_TOKEN、XIAOI_DID
+#    XIAOI_USER_ID、XIAOI_PASS_TOKEN、XIAOI_DID（可选 XIAOI_DEFAULT_DID）
 
 # 3. 一键启动
 docker-compose up -d
 ```
 
-`.env` 文件只需填 3 项：
+`.env` 文件建议至少填 3 项（可选加默认音箱）：
 
 ```env
 XIAOI_USER_ID=你的小米ID（数字）
 XIAOI_PASS_TOKEN=你的passToken
 XIAOI_DID=你的音箱名称
+XIAOI_DEFAULT_DID=默认音箱did
 XIAOI_TOKEN=你的Webhook鉴权Token
 ```
 
@@ -390,6 +466,7 @@ docker run -d \
   -e XIAOI_USER_ID=你的小米ID \
   -e XIAOI_PASS_TOKEN=你的passToken \
   -e XIAOI_DID=你的音箱名称 \
+  -e XIAOI_DEFAULT_DID=默认音箱did \
   xiaoi-webhook
 ```
 
@@ -400,6 +477,7 @@ docker run -d \
 | `XIAOI_USER_ID` | ✅ | 小米 ID（数字，在小米账号个人信息中查看） |
 | `XIAOI_PASS_TOKEN` | ✅ | passToken（推荐登录方式） |
 | `XIAOI_DID` | ✅ | 音箱在米家 App 中的名称（必须完全一致） |
+| `XIAOI_DEFAULT_DID` | | 默认音箱 did（不填时回退 `XIAOI_DID`） |
 | `XIAOI_PASSWORD` | | 密码登录（不推荐，可能被安全验证拦截） |
 | `XIAOI_TOKEN` | | Webhook 鉴权 Token（留空自动生成） |
 | `XIAOI_PORT` | | 端口号（默认 `51666`） |

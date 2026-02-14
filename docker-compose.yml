@@ -23,6 +23,7 @@ services:
       - XIAOI_USER_ID=${XIAOI_USER_ID:-}          # 小米 ID（数字，不是手机号）
       - XIAOI_PASS_TOKEN=${XIAOI_PASS_TOKEN:-}    # passToken（推荐）
       - XIAOI_DID=${XIAOI_DID:-}                  # 音箱在米家中的名称（必须完全一致）
+      - XIAOI_DEFAULT_DID=${XIAOI_DEFAULT_DID:-}  # 默认音箱 did（可选，不填则使用 XIAOI_DID）
       # ================================================
       # 【可选】高级配置
       # ================================================

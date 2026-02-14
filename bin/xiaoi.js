@@ -6,8 +6,11 @@
  * 用法:
  *   xiaoi                            # 启动交互式 TUI 界面
  *   xiaoi tts "你好，代码已完成"       # 直接发送语音通知
+ *   xiaoi tts "你好" --did 客厅小爱    # 指定目标音箱
  *   xiaoi audio <url>                # 播放音频
  *   xiaoi volume <0-100>             # 设置音量
+ *   xiaoi command <siid> <aiid> [paramsJson]  # 发送 MiOT 指令
+ *   xiaoi getprop <siid> <piid>      # 读取 MiOT 属性值
  *   xiaoi status                     # 检查连接状态
  *   xiaoi help                       # 显示帮助
  */
@@ -21,9 +24,11 @@ const HELP_TEXT = `
 
 用法:
   xiaoi                     启动交互式界面（TUI）
-  xiaoi tts <文字>          发送语音通知
-  xiaoi audio <url>         播放音频链接
-  xiaoi volume <0-100>      设置音箱音量
+  xiaoi tts <文字> [--did <did>]     发送语音通知（可指定目标音箱）
+  xiaoi audio <url> [--did <did>]    播放音频链接（可指定目标音箱）
+  xiaoi volume <0-100> [--did <did>] 设置音箱音量（可指定目标音箱）
+  xiaoi command <siid> <aiid> [paramsJson] [--did <did>] 发送 MiOT 指令
+  xiaoi getprop <siid> <piid> [--did <did>] 读取 MiOT 属性值
   xiaoi status              检查连接状态
   xiaoi pm2 <命令>           Webhook 常驻（PM2）一键管理
   xiaoi help                显示此帮助
@@ -31,8 +36,12 @@ const HELP_TEXT = `
 示例:
   xiaoi                          # 打开交互界面
   xiaoi tts "代码编译完成"
+  xiaoi tts "代码编译完成" --did 客厅小爱
   xiaoi tts 部署已完成，请查看
   xiaoi volume 30
+  xiaoi command 3 1 "[]"
+  xiaoi command 3 1 '[{"piid":1,"value":true}]' --did 客厅小爱
+  xiaoi getprop 3 1 --did 客厅小爱
   xiaoi pm2 start                # 一键常驻启动 Webhook（后台运行）
   xiaoi pm2 status               # 查看 PM2 常驻状态
 
@@ -42,6 +51,36 @@ const HELP_TEXT = `
 
 登录问题: https://github.com/idootop/migpt-next/issues/4
 `;
+
+function parseDidOption(argv) {
+    const rest = [];
+    let did = "";
+
+    for (let i = 0; i < argv.length; i++) {
+        const token = String(argv[i] || "");
+
+        if (token === "--did" || token === "-d") {
+            const next = i + 1 < argv.length ? String(argv[i + 1] || "") : "";
+            did = next.trim();
+            i += 1;
+            continue;
+        }
+
+        if (token.startsWith("--did=")) {
+            did = token.slice("--did=".length).trim();
+            continue;
+        }
+
+        if (token.startsWith("-d=")) {
+            did = token.slice("-d=".length).trim();
+            continue;
+        }
+
+        rest.push(argv[i]);
+    }
+
+    return { rest, did };
+}
 
 async function main() {
     // 首次运行自动创建 ~/.xiaoi/config.json（空模板），避免用户找不到配置位置
@@ -351,41 +390,104 @@ xiaoi pm2 用法:
         await speaker.init();
         console.log("✅ 连接成功");
 
+        const { rest: cliArgs, did: targetDid } = parseDidOption(args.slice(1));
+        const targetOpts = targetDid ? { did: targetDid } : undefined;
+        if (targetDid) {
+            console.log(`🎯 目标音箱: ${targetDid}`);
+        }
+
         switch (command) {
             case "tts": {
-                const text = args.slice(1).join(" ");
+                const text = cliArgs.join(" ");
                 if (!text) {
                     console.error("❌ 请提供要播报的文字");
-                    console.error("  用法: xiaoi tts <文字>");
+                    console.error("  用法: xiaoi tts <文字> [--did <did>]");
                     process.exit(1);
                 }
                 console.log(`📢 发送: ${text}`);
-                await speaker.tts(text);
+                await speaker.tts(text, targetOpts);
                 console.log("✅ 播报完成");
                 break;
             }
 
             case "audio": {
-                const url = args[1];
+                const url = cliArgs[0];
                 if (!url) {
                     console.error("❌ 请提供音频 URL");
+                    console.error("  用法: xiaoi audio <url> [--did <did>]");
                     process.exit(1);
                 }
                 console.log(`🎵 播放: ${url}`);
-                await speaker.playAudio(url);
+                await speaker.playAudio(url, targetOpts);
                 console.log("✅ 播放完成");
                 break;
             }
 
             case "volume": {
-                const volume = parseInt(args[1]);
+                const volume = parseInt(cliArgs[0]);
                 if (isNaN(volume) || volume < 0 || volume > 100) {
                     console.error("❌ 音量值必须为 0-100 的整数");
+                    console.error("  用法: xiaoi volume <0-100> [--did <did>]");
                     process.exit(1);
                 }
                 console.log(`🔊 设置音量: ${volume}`);
-                await speaker.setVolume(volume);
+                await speaker.setVolume(volume, targetOpts);
                 console.log("✅ 音量已设置");
+                break;
+            }
+
+            case "command": {
+                const siid = Number(cliArgs[0]);
+                const aiid = Number(cliArgs[1]);
+                if (!Number.isFinite(siid) || !Number.isFinite(aiid)) {
+                    console.error("❌ siid/aiid 必须为数字");
+                    console.error(
+                        "  用法: xiaoi command <siid> <aiid> [paramsJson] [--did <did>]"
+                    );
+                    process.exit(1);
+                }
+
+                let params = [];
+                if (cliArgs[2]) {
+                    try {
+                        const parsed = JSON.parse(cliArgs[2]);
+                        if (!Array.isArray(parsed)) {
+                            throw new Error("paramsJson 必须是 JSON 数组");
+                        }
+                        params = parsed;
+                    } catch (e) {
+                        console.error(`❌ paramsJson 解析失败: ${e.message}`);
+                        console.error(
+                            "  示例: xiaoi command 3 1 \"[]\" [--did <did>]"
+                        );
+                        process.exit(1);
+                    }
+                }
+
+                console.log(
+                    `🧩 发送指令: siid=${siid}, aiid=${aiid}, params=${JSON.stringify(params)}`
+                );
+                const result = await speaker.doAction(siid, aiid, params, targetOpts);
+                console.log("✅ 指令执行完成");
+                if (result !== undefined) {
+                    console.log(`📄 返回: ${JSON.stringify(result)}`);
+                }
+                break;
+            }
+
+            case "getprop":
+            case "get-property":
+            case "property": {
+                const siid = Number(cliArgs[0]);
+                const piid = Number(cliArgs[1]);
+                if (!Number.isFinite(siid) || !Number.isFinite(piid)) {
+                    console.error("❌ siid/piid 必须为数字");
+                    console.error("  用法: xiaoi getprop <siid> <piid> [--did <did>]");
+                    process.exit(1);
+                }
+                console.log(`🔎 读取属性: siid=${siid}, piid=${piid}`);
+                const value = await speaker.getProperty(siid, piid, targetOpts);
+                console.log(`✅ 属性值: ${JSON.stringify(value)}`);
                 break;
             }
 

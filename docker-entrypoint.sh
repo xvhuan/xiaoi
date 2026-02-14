@@ -16,6 +16,7 @@ mkdir -p "$CONFIG_DIR/log"
 #      XIAOI_PASSWORD    - 小米密码（不推荐）
 #      XIAOI_PASS_TOKEN  - passToken（推荐）
 #      XIAOI_DID         - 设备名称（必填）
+#      XIAOI_DEFAULT_DID - 默认音箱 did（可选，覆盖默认设备）
 #      XIAOI_TTS_MODE    - TTS 模式: auto/command/default
 #      XIAOI_VERBOSE_LOG - 详细日志: true/false
 #      XIAOI_PORT        - Webhook 端口（默认 51666）
@@ -41,12 +42,31 @@ if (!cfg.mcp) cfg.mcp = {};
 
 // ---- speaker 配置 ----
 const env = process.env;
+const normalizeDid = (v) => typeof v === 'string' ? v.trim() : '';
+const upsertSpeaker = (item) => {
+  if (!cfg.speaker.speakers || !Array.isArray(cfg.speaker.speakers)) {
+    cfg.speaker.speakers = [];
+  }
+  const did = normalizeDid(item && item.did);
+  if (!did) return;
+  const idx = cfg.speaker.speakers.findIndex((row) => normalizeDid(row && row.did) === did);
+  const old = idx >= 0 ? cfg.speaker.speakers[idx] : {};
+  const merged = {
+    did,
+    name: (item && item.name) ? String(item.name).trim() : (old.name || did),
+    model: (item && item.model) ? String(item.model).trim() : (old.model || ''),
+    enabled: item && item.enabled === false ? false : (old.enabled !== false),
+  };
+  if (idx >= 0) cfg.speaker.speakers[idx] = merged;
+  else cfg.speaker.speakers.push(merged);
+};
 
 // 环境变量优先覆盖（非空时才覆盖）
 if (env.XIAOI_USER_ID)    cfg.speaker.userId    = env.XIAOI_USER_ID;
 if (env.XIAOI_PASSWORD)   cfg.speaker.password  = env.XIAOI_PASSWORD;
 if (env.XIAOI_PASS_TOKEN) cfg.speaker.passToken = env.XIAOI_PASS_TOKEN;
 if (env.XIAOI_DID)        cfg.speaker.did       = env.XIAOI_DID;
+if (env.XIAOI_DEFAULT_DID) cfg.speaker.defaultDid = env.XIAOI_DEFAULT_DID;
 if (env.XIAOI_TTS_MODE)   cfg.speaker.ttsMode   = env.XIAOI_TTS_MODE;
 
 if (env.XIAOI_VERBOSE_LOG !== undefined) {
@@ -67,6 +87,21 @@ if (!cfg.speaker.ttsFallbackCommands) {
     asx4b:[5,3], x6a:[7,3], x08e:[7,3], x8f:[7,3]
   };
 }
+
+// 默认 did 兼容规则：defaultDid > did
+cfg.speaker.did = normalizeDid(cfg.speaker.did);
+cfg.speaker.defaultDid = normalizeDid(cfg.speaker.defaultDid);
+if (!cfg.speaker.defaultDid && cfg.speaker.did) {
+  cfg.speaker.defaultDid = cfg.speaker.did;
+}
+if (cfg.speaker.defaultDid && !cfg.speaker.did) {
+  cfg.speaker.did = cfg.speaker.defaultDid;
+}
+
+// 确保默认/兼容 did 在 speakers 列表中存在
+if (!Array.isArray(cfg.speaker.speakers)) cfg.speaker.speakers = [];
+if (cfg.speaker.did) upsertSpeaker({ did: cfg.speaker.did, name: cfg.speaker.did, enabled: true });
+if (cfg.speaker.defaultDid) upsertSpeaker({ did: cfg.speaker.defaultDid, name: cfg.speaker.defaultDid, enabled: true });
 
 // ---- webhook 配置 ----
 cfg.webhook.host = '0.0.0.0';  // 容器内必须监听所有网卡
@@ -100,6 +135,7 @@ console.log('╠═════════════════════�
 console.log('║  配置文件: ' + cfgPath.padEnd(34) + '║');
 console.log('║  监听端口: ' + String(cfg.webhook.port).padEnd(34) + '║');
 console.log('║  TTS 模式: ' + (cfg.speaker.ttsMode || 'auto').padEnd(34) + '║');
+console.log('║  默认音箱: ' + (cfg.speaker.defaultDid || cfg.speaker.did || '未设置').padEnd(34) + '║');
 console.log('║  Webhook Token: ' + (cfg.webhook.token ? cfg.webhook.token.substring(0, 8) + '...' : '无').padEnd(28) + '║');
 console.log('╚══════════════════════════════════════════════╝');
 

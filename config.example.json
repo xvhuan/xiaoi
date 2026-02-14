@@ -4,6 +4,8 @@
         "password": "",
         "passToken": "",
         "did": "",
+        "defaultDid": "",
+        "speakers": [],
         "ttsMode": "auto",
         "verboseLog": false,
         "ttsFallbackCommand": [5, 1],

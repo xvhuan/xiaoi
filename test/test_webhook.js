@@ -8,11 +8,15 @@
  *   tts <文字>      - 发送文字到音箱
  *   audio <url>     - 播放音频链接
  *   volume <0-100>  - 设置音量
+ *   command <siid> <aiid> [jsonParams] - 发送 MiOT 指令
  *
  * 示例:
  *   node test/test_webhook.js status
  *   node test/test_webhook.js tts "你好，现在请注意"
  *   node test/test_webhook.js volume 30
+ *
+ * 可选环境变量:
+ *   XIAOI_TARGET_DID=客厅小爱  # 指定本次请求目标音箱
  */
 
 const http = require("http");
@@ -22,6 +26,7 @@ const path = require("path");
 const WEBHOOK_HOST = "localhost";
 const WEBHOOK_PORT = 3088;
 const LOG_FILE = "test/test_webhook.log";
+const TARGET_DID = (process.env.XIAOI_TARGET_DID || "").trim();
 
 function resolveConfigPath() {
     const home = process.env.USERPROFILE || process.env.HOME || "";
@@ -105,6 +110,9 @@ async function main() {
     const command = args[0] || "status";
 
     log(`===== 测试开始: ${command} =====`);
+    if (TARGET_DID) {
+        log(`目标音箱 did: ${TARGET_DID}`);
+    }
 
     try {
         let result;
@@ -116,7 +124,8 @@ async function main() {
 
             case "tts": {
                 const text = args.slice(1).join(" ") || "这是一条测试消息";
-                result = await request("POST", "/webhook/tts", { text });
+                const body = TARGET_DID ? { text, did: TARGET_DID } : { text };
+                result = await request("POST", "/webhook/tts", body);
                 break;
             }
 
@@ -126,7 +135,8 @@ async function main() {
                     log("❌ 请提供音频 URL");
                     return;
                 }
-                result = await request("POST", "/webhook/audio", { url });
+                const body = TARGET_DID ? { url, did: TARGET_DID } : { url };
+                result = await request("POST", "/webhook/audio", body);
                 break;
             }
 
@@ -136,13 +146,38 @@ async function main() {
                     log("❌ 请提供有效的音量数值（0-100）");
                     return;
                 }
-                result = await request("POST", "/webhook/volume", { volume });
+                const body = TARGET_DID ? { volume, did: TARGET_DID } : { volume };
+                result = await request("POST", "/webhook/volume", body);
+                break;
+            }
+
+            case "command": {
+                const siid = Number(args[1]);
+                const aiid = Number(args[2]);
+                if (!Number.isFinite(siid) || !Number.isFinite(aiid)) {
+                    log("❌ 请提供有效的 siid/aiid");
+                    return;
+                }
+                let params = [];
+                if (args[3]) {
+                    try {
+                        const parsed = JSON.parse(args[3]);
+                        params = Array.isArray(parsed) ? parsed : [];
+                    } catch {
+                        log("❌ jsonParams 解析失败，请传 JSON 数组字符串");
+                        return;
+                    }
+                }
+                const body = TARGET_DID
+                    ? { siid, aiid, params, did: TARGET_DID }
+                    : { siid, aiid, params };
+                result = await request("POST", "/webhook/command", body);
                 break;
             }
 
             default:
                 log(`❌ 未知命令: ${command}`);
-                log("可用命令: status, tts, audio, volume");
+                log("可用命令: status, tts, audio, volume, command");
                 return;
         }
 
