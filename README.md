@@ -402,7 +402,7 @@ xiaoi pm2 startup
 
 ### Docker 部署（容器化 Webhook）
 
-将 xiaoi Webhook 封装到 Docker 容器运行，适合服务器/NAS/云主机。**不需要手动编辑任何配置文件**，只需填写环境变量即可启动。
+将 xiaoi Webhook 封装到 Docker 容器运行，适合服务器/NAS/云主机。基础场景下**不需要手动编辑配置文件**，只需填写环境变量即可启动（多音箱场景见下文“多音箱配置”）。
 
 #### 快速开始（直接拉镜像，不用 clone）
 
@@ -450,6 +450,52 @@ XIAOI_TOKEN=你的Webhook鉴权Token
 ```
 
 > passToken 获取方法：[migpt-next/issues/4](https://github.com/idootop/migpt-next/issues/4)
+
+#### 多音箱配置（两种方式）
+
+当你有多个音箱时，推荐把目标设备都写进 `speaker.speakers`，并设置 `speaker.defaultDid`。
+
+方式 1：进容器用 `xiaoi` 交互配置（适合手动运维）
+
+```bash
+# docker run 部署
+docker exec -it xiaoi-webhook node /app/bin/xiaoi.js
+
+# docker compose 部署
+docker compose exec xiaoi-webhook node /app/bin/xiaoi.js
+```
+
+然后在 TUI 里进入：`账号设置 -> 音箱列表管理`，完成“添加音箱/设置默认音箱”。
+
+方式 2：直接编辑配置文件（适合批量/自动化）
+
+容器内配置文件路径：`/root/.xiaoi/config.json`（前提是挂载了持久化卷）。
+
+```json
+{
+  "speaker": {
+    "defaultDid": "客厅音箱did",
+    "speakers": [
+      { "did": "客厅音箱did", "name": "客厅", "model": "oh2p", "enabled": true },
+      { "did": "卧室音箱did", "name": "卧室", "model": "lx04", "enabled": true }
+    ]
+  }
+}
+```
+
+修改后重启容器生效：
+
+```bash
+docker restart xiaoi-webhook
+# 或
+docker compose restart xiaoi-webhook
+```
+
+调用规则：
+
+1. 请求里不传 `did`：走默认音箱（`defaultDid > XIAOI_DEFAULT_DID > speaker.did`）
+2. 请求里传 `did`：走指定音箱
+3. `did` 必须在 `speaker.speakers` 且 `enabled=true`
 
 
 #### 纯 Docker 命令（不用 docker-compose）
