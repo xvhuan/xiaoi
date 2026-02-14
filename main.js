@@ -2,6 +2,7 @@ const { MiGPT } = require("@mi-gpt/next");
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
+const os = require("os");
 
 // ============================================
 // 加载配置
@@ -210,6 +211,13 @@ function startWebhookServer() {
 async function main() {
   // 先启动 Webhook 服务器
   const server = startWebhookServer();
+
+  // 切换 cwd 到 ~/.xiaoi/，确保 @mi-gpt/miot 的 .mi.json 写入固定位置
+  const miCacheDir = path.join(process.env.USERPROFILE || process.env.HOME || os.homedir(), ".xiaoi");
+  if (!fs.existsSync(miCacheDir)) {
+    fs.mkdirSync(miCacheDir, { recursive: true });
+  }
+  process.chdir(miCacheDir);
 
   // 启动 MiGPT（后台运行，不阻塞）
   MiGPT.start({
